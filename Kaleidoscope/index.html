@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaleidoscope V2 (Clear Always Enabled, No Save)</title> <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.dom.min.js"></script>
+    <style>
+        /* Basic styling for the page (Similar to V2) */
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Align content to the top */
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 15px;
+            background-color: #1a1a1a;
+            overflow-y: auto;
+            font-family: 'Arial', sans-serif;
+            color: #eee;
+        }
+        canvas {
+            display: block;
+            border: 1px solid #444;
+            margin-bottom: 15px;
+            max-width: 95%;
+            box-sizing: border-box;
+            cursor: crosshair;
+        }
+        /* Styling for the controls container */
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 10px 15px;
+            padding: 15px;
+            background-color: rgba(50, 50, 50, 0.8);
+            border-radius: 8px;
+            max-width: 90%;
+            margin-bottom: 20px;
+        }
+        /* Styling for individual control groups */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            min-width: 110px;
+        }
+         .slider-group div {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #bbb;
+            font-weight: bold;
+            text-align: center;
+        }
+        input[type="range"] {
+            width: 80px;
+            cursor: pointer;
+            margin: 0;
+        }
+        button { /* Styling only for Clear button now */
+            padding: 8px 15px;
+            font-size: 12px;
+            background-color: #dc3545; /* Red color for clear */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+             margin-top: auto; /* Align button nicely */
+        }
+        button:hover {
+            background-color: #c82333; /* Darker red on hover */
+        }
+        /* Removed disabled styles as clear is always enabled */
+        select {
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background-color: #333;
+            color: #eee;
+            min-width: 80px;
+        }
+        .checkbox-group {
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 5px; /* Add space above checkboxes */
+        }
+        input[type="checkbox"] {
+            cursor: pointer;
+            margin: 0;
+            width: 14px;
+            height: 14px;
+        }
+        .value-display {
+            font-size: 11px;
+            min-width: 20px;
+            text-align: center;
+            color: #ddd;
+            background-color: #444;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+         /* Class to hide elements (kept for potential future use) */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div class="control-group slider-group">
+            <label for="symmetrySlider">Symmetry</label>
+            <div>
+                <input type="range" id="symmetrySlider" min="2" max="20" value="6" step="1">
+                <span id="symmetryValue" class="value-display">6</span>
+            </div>
+        </div>
+
+        <div class="control-group slider-group">
+            <label for="strokeWeightSlider">Stroke Weight</label>
+            <div>
+                <input type="range" id="strokeWeightSlider" min="1" max="20" value="2" step="1">
+                <span id="strokeWeightValue" class="value-display">2</span>
+            </div>
+        </div>
+
+        <div class="control-group slider-group" id="fadingSpeedGroup"> <label for="fadingSpeedSlider">Fading Speed</label>
+            <div>
+                <input type="range" id="fadingSpeedSlider" min="1" max="50" value="10" step="1">
+                <span id="fadingSpeedValue" class="value-display">10</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="drawModeSelect">Draw Mode</label>
+            <select id="drawModeSelect">
+                <option value="line">Line</option>
+                <option value="circle">Circle</option>
+                <option value="square">Square</option>
+                </select>
+        </div>
+
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="reflectionToggle" checked>
+            <label for="reflectionToggle">Reflection</label>
+        </div>
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="fadingToggle">
+            <label for="fadingToggle">Fading Trails</label>
+        </div>
+
+        <button id="clearButton">Clear (C)</button>
+
+        </div>
+
+    <script>
+        // --- Global Variables ---
+        let symmetry = 6;
+        let angle = 360 / symmetry;
+        let hueValue = 0; // For color cycling
+        let currentStrokeWeight = 2;
+        let drawingMode = 'line'; // 'line', 'circle', 'square'
+        let useReflection = true;
+        let useFading = false;
+        let fadingAlpha = 10; // Alpha value for fading background (controls speed)
+        // bgColor variable removed
+
+        // --- UI Element References ---
+        let symmetrySlider, strokeWeightSlider, fadingSpeedSlider, drawModeSelect;
+        let reflectionToggle, fadingToggle;
+        let clearButton; // Save button reference removed
+        let symmetryValueSpan, strokeWeightValueSpan, fadingSpeedValueSpan;
+        let controlsContainer;
+        let canvas;
+        // fadingSpeedGroup reference removed (no longer conditional)
+
+        // --- p5.js Setup Function ---
+        function setup() {
+            console.log("--- Starting setup() V2 Reverted ---");
+            controlsContainer = select('#controls');
+            let canvasHeight = windowHeight - (controlsContainer ? controlsContainer.height : 100) - 60;
+            canvasHeight = max(canvasHeight, 300);
+            let canvasWidth = windowWidth * 0.95;
+            canvas = createCanvas(canvasWidth, canvasHeight);
+            canvas.parent(document.body);
+             if (controlsContainer) {
+                 document.body.insertBefore(canvas.elt, controlsContainer.elt);
+             }
+
+            angleMode(DEGREES);
+            colorMode(HSB, 360, 100, 100, 100);
+            background(0); // Initial black background (V2 default)
+            console.log("p5 modes set, initial background drawn.");
+
+            // --- Get UI Element References ---
+            symmetrySlider = select('#symmetrySlider');
+            strokeWeightSlider = select('#strokeWeightSlider');
+            fadingSpeedSlider = select('#fadingSpeedSlider');
+            drawModeSelect = select('#drawModeSelect');
+            reflectionToggle = select('#reflectionToggle');
+            fadingToggle = select('#fadingToggle');
+            clearButton = select('#clearButton'); // Keep clear button ref
+            // saveButton ref removed
+            symmetryValueSpan = select('#symmetryValue');
+            strokeWeightValueSpan = select('#strokeWeightValue');
+            fadingSpeedValueSpan = select('#fadingSpeedValue');
+            // fadingSpeedGroup ref removed
+
+             if (!canvas || !symmetrySlider || !clearButton) {
+                 console.error("ERROR: Failed to select one or more essential UI elements!");
+             }
+             console.log("UI references obtained.");
+
+            // --- Initialize Variables from Controls ---
+            symmetry = int(symmetrySlider.value());
+            currentStrokeWeight = int(strokeWeightSlider.value());
+            fadingAlpha = int(fadingSpeedSlider.value());
+            drawingMode = drawModeSelect.value();
+            useReflection = reflectionToggle.checked();
+            useFading = fadingToggle.checked();
+            angle = 360 / symmetry;
+            console.log("Initial values set:", { symmetry, currentStrokeWeight, useFading });
+
+            updateSliderDisplay();
+            // updateButtonStates removed
+            // updateConditionalUI removed
+
+            // --- Add Event Listeners ---
+            symmetrySlider.input(() => { symmetry = int(symmetrySlider.value()); angle = 360 / symmetry; updateSliderDisplay(); });
+            strokeWeightSlider.input(() => { currentStrokeWeight = int(strokeWeightSlider.value()); updateSliderDisplay(); });
+            fadingSpeedSlider.input(() => { fadingAlpha = int(fadingSpeedSlider.value()); updateSliderDisplay(); });
+            drawModeSelect.changed(() => { drawingMode = drawModeSelect.value(); });
+            reflectionToggle.changed(() => { useReflection = reflectionToggle.checked(); });
+            fadingToggle.changed(() => {
+                useFading = fadingToggle.checked();
+                console.log("Fading toggled:", useFading);
+                // No longer need to update button states or conditional UI
+                if (!useFading) {
+                    background(0); // Clear to black when fading turned off
+                }
+            });
+
+            // Clear button listener - ALWAYS calls clearCanvas
+            clearButton.mousePressed(clearCanvas);
+            // saveButton listener removed
+
+            // canvas.mousePressed(handleMousePressed); // Removed V3 click listener
+
+            strokeWeight(currentStrokeWeight);
+            noFill(); // V2 default
+            console.log("--- setup() finished V2 Reverted ---");
+        }
+
+        // --- p5.js Draw Function ---
+        function draw() {
+            // --- Handle Background ---
+            if (useFading) {
+                // Original V2 fading from black
+                background(0, 0, 0, fadingAlpha); // Black with low alpha
+            }
+            // If not fading, background is only cleared by setup, resize, or clear button
+
+            translate(width / 2, height / 2);
+
+            // --- Determine Drawing Coordinates (Mouse Only) ---
+            let mx, my, pmx, pmy;
+            let canDraw = false;
+
+            if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                mx = mouseX - width / 2;
+                my = mouseY - height / 2;
+                pmx = pmouseX - width / 2;
+                pmy = pmouseY - height / 2;
+                if (pmx === -width/2 && pmy === -height/2 && frameCount > 1) {
+                   pmx = mx;
+                   pmy = my;
+                }
+                // Draw if mouse moved (or simply if inside canvas)
+                // Let's keep the V2 behaviour which drew if inside
+                canDraw = true;
+            }
+
+            // --- Draw Main Kaleidoscope Pattern ---
+            if (canDraw) {
+                let speed = dist(mx, my, pmx, pmy); // Speed calculation still useful
+
+                // --- Set Drawing Properties (V2 Color Cycle) ---
+                hueValue = (hueValue + 0.5) % 360;
+                stroke(hueValue, 85, 95, 85); // V2 stroke color
+                noFill(); // V2 fill state
+                strokeWeight(currentStrokeWeight);
+
+                let baseSize = max(1, currentStrokeWeight / 2);
+                let maxSize = currentStrokeWeight * 3 + 5;
+                // V2 used strokeWeight directly, let's revert to that for simplicity
+                // let dynamicSize = map(speed, 0, 50, baseSize, maxSize, true);
+                let dynamicSize = currentStrokeWeight + map(speed, 0, 50, 0, 10, true); // V2-like size variation
+
+                // --- Symmetry Loop ---
+                for (let i = 0; i < symmetry; i++) {
+                    rotate(angle);
+                    push();
+                    // Use drawShape helper function (kept for structure)
+                    drawShape(mx, my, pmx, pmy, dynamicSize);
+                    // Handle Reflection
+                    if (useReflection) {
+                        scale(1, -1);
+                        drawShape(mx, my, pmx, pmy, dynamicSize);
+                    }
+                    pop();
+                }
+            }
+        }
+
+        // --- Helper Function to Draw Shapes (No Triangle) ---
+        function drawShape(mx, my, pmx, pmy, dynamicSize) {
+             switch (drawingMode) {
+                case 'line':
+                    // Only draw line if there's movement
+                    if (abs(mx - pmx) > 0.1 || abs(my - pmy) > 0.1) {
+                       line(mx, my, pmx, pmy);
+                    }
+                    break;
+                case 'circle':
+                     // V2 drew ellipse based on stroke weight primarily
+                    ellipse(mx, my, dynamicSize, dynamicSize);
+                    break;
+                case 'square':
+                    // V2 drew rect based on stroke weight primarily
+                    rectMode(CENTER);
+                    rect(mx, my, dynamicSize, dynamicSize);
+                    break;
+                // Triangle case removed
+            }
+        }
+
+        // --- Helper Function to Clear Canvas ---
+        function clearCanvas() {
+            console.log("clearCanvas called");
+            background(0); // Always clears to black (V2 behavior)
+            // particle clearing removed
+        }
+
+        // --- saveArt function removed ---
+
+         // --- Helper Function to Update Slider Displays ---
+        function updateSliderDisplay() {
+            if (symmetryValueSpan) symmetryValueSpan.html(symmetry);
+            if (strokeWeightValueSpan) strokeWeightValueSpan.html(currentStrokeWeight);
+            if (fadingSpeedValueSpan) fadingSpeedValueSpan.html(fadingAlpha);
+        }
+
+        // --- updateConditionalUI function removed ---
+        // --- updateButtonStates function removed ---
+        // --- updateCanvasCursor function removed ---
+        // --- handleMousePressed function simplified (does nothing) ---
+        function handleMousePressed() {
+            return true; // Allow default behavior
+        }
+        // --- Particle Class removed ---
+
+        // --- Event Handlers ---
+        function keyPressed() {
+            // Always clear, regardless of fading state
+            if (key === 'c' || key === 'C') {
+                console.log("Clear shortcut pressed");
+                clearCanvas();
+                return false; // Prevent default browser action
+            }
+            // Save shortcut ('s') removed
+        }
+
+        function windowResized() {
+             console.log("windowResized called (V2 Reverted)");
+             let controlsHeight = controlsContainer ? controlsContainer.height : 100;
+             let canvasHeight = windowHeight - controlsHeight - 60;
+             canvasHeight = max(canvasHeight, 300);
+             let canvasWidth = windowWidth * 0.95;
+             resizeCanvas(canvasWidth, canvasHeight);
+
+             let canvasElement = select('canvas');
+             if (canvasElement && controlsContainer && canvasElement.elt.nextSibling !== controlsContainer.elt) {
+                 document.body.insertBefore(canvasElement.elt, controlsContainer.elt);
+             }
+             // Always clear to black on resize (V2 behavior)
+             background(0);
+        }
+
+    </script>
+</body>
+</html>
+
