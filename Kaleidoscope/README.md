@@ -43,7 +43,7 @@ Welcome, brave artist, to the Kaleido-Doodler 3000™! This isn't your grandma's
 
 ---
 
-## 🎮 How To Operate This Contraption  
+## 🎮 How To Operate
 
 1. **Wiggle Your Mouse**  
    - Move it over the big black square (that's the canvas)  
