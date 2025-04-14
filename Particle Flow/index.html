@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Interactive p5.js Particle Flow Field</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.2/p5.js"></script>
+    <style>
+        /* Basic CSS Reset & Font */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            background-color: #121212; /* Slightly lighter dark background */
+            color: #e0e0e0; /* Light gray text */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Remove flex layout to allow overlap */
+            /* display: flex; */
+        }
+
+        /* Style the main canvas container (now on the left) */
+        #canvas-container {
+            /* flex-grow: 1; */ /* Remove flex-grow */
+            width: 100%; /* Canvas container takes full width */
+            height: 100%; /* Canvas container takes full height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            /* background-color: #000; /* Ensure canvas area background if needed */
+        }
+        canvas {
+            display: block;
+            cursor: crosshair; /* Indicate interaction area */
+            /* border: 1px solid #444; /* Optional border */
+        }
+
+        /* Style the controls panel (now on the right) */
+        #controls {
+            position: fixed; /* Position fixed to overlay */
+            right: 0;
+            top: 0;
+            z-index: 10; /* Ensure it's above canvas container */
+            width: 280px;
+            padding: 25px;
+            background-color: rgba(30, 30, 30, 0.9); /* Slightly transparent background */
+            border-left: 1px solid #333;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto; /* Scroll if needed */
+            display: flex;
+            flex-direction: column;
+            gap: 18px; /* Increased spacing */
+            transition: background-color 0.3s; /* Smooth transition */
+            /* order: 1; */ /* Remove order */
+            /* Added for fullscreen animation */
+            transition: transform 0.5s ease-in-out, background-color 0.3s;
+            transform: translateX(0);
+        }
+
+        /* Class to hide controls panel */
+        #controls.controls-hidden {
+            transform: translateX(100%);
+        }
+
+        /* Style for the exit fullscreen button */
+        #exit-fullscreen-btn {
+            position: fixed; /* Fixed positioning relative to viewport */
+            top: 15px;
+            right: 15px;
+            z-index: 1000; /* Ensure it's above the canvas */
+            background: rgba(255, 255, 255, 0.2); /* Transparent background */
+            color: #e0e0e0;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%; /* Make it circular */
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        #exit-fullscreen-btn:hover {
+             background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Control Group Styling */
+        .control-group {
+            border-bottom: 1px solid #333;
+            padding-bottom: 18px;
+        }
+        .control-group:last-child {
+            border-bottom: none; /* No border for the last group */
+        }
+        #controls h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #4dd0e1; /* Brighter cyan accent */
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        #controls label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #b0b0b0; /* Lighter gray for labels */
+        }
+        #controls span.value-display {
+            font-weight: bold;
+            color: #e0e0e0;
+            background-color: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            min-width: 30px; /* Ensure space for value */
+            display: inline-block;
+            text-align: center;
+        }
+
+        /* Input Styling (Sliders, Color, Select) */
+        #controls input[type="range"] {
+            width: 100%;
+            margin-bottom: 10px;
+            cursor: pointer;
+            appearance: none; /* Override default look */
+            height: 6px;
+            background: #444; /* Slider track */
+            border-radius: 3px;
+            outline: none;
+        }
+        /* Slider Thumb Styling */
+        #controls input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4dd0e1; /* Accent color thumb */
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #controls input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #4dd0e1;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        #controls input[type="color"] {
+            width: 100%;
+            height: 35px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 2px;
+            cursor: pointer;
+            box-sizing: border-box;
+             background-color: #333;
+             margin-bottom: 10px; /* Added margin */
+        }
+         #controls input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        #controls input[type="color"]::-webkit-color-swatch {
+            border: none;
+             border-radius: 3px;
+        }
+
+
+        #controls select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #333;
+            color: #e0e0e0;
+            font-size: 0.9em;
+            cursor: pointer;
+             appearance: none; /* Custom arrow */
+             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23B0B0B0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+             background-repeat: no-repeat;
+             background-position: right 10px top 50%;
+             background-size: .65em auto;
+             margin-bottom: 10px; /* Added margin */
+        }
+
+        /* Checkbox & Radio Styling */
+         #controls input[type="checkbox"],
+         #controls input[type="radio"] {
+            margin-right: 8px;
+            cursor: pointer;
+            accent-color: #4dd0e1; /* Style check/radio color */
+         }
+        #controls .radio-group label,
+        #controls .checkbox-group label {
+            display: inline-flex; /* Align items nicely */
+            align-items: center;
+            margin-right: 15px;
+            margin-bottom: 5px; /* Spacing for wrapped items */
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        /* Ensure radio group takes block space */
+        #controls .radio-group {
+             margin-bottom: 10px;
+        }
+
+        /* Button Styling */
+        #controls button {
+            width: 100%; /* Full width buttons */
+            padding: 10px 15px;
+            background-color: #4dd0e1; /* Accent color */
+            border: none;
+            color: #111; /* Dark text on button */
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+            margin-top: 5px; /* Space above buttons */
+        }
+        #controls button:hover {
+            background-color: #80deea; /* Lighter cyan on hover */
+        }
+         #controls button:active {
+             transform: scale(0.98); /* Click effect */
+         }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <h3>Particles</h3>
+            <label for="particleCount">Count: <span id="particleCountValue" class="value-display">1500</span></label>
+            <input type="range" id="particleCount" min="100" max="5000" step="100" value="1500">
+
+            <label for="particleColor">Base Color:</label>
+            <input type="color" id="particleColor" value="#80DEEA">
+
+            <label for="particleColorMode">Color Mode:</label>
+            <select id="particleColorMode">
+                <option value="static" selected>Static</option>
+                <option value="speed">Speed-Based</option>
+                <option value="age">Age-Based</option>
+            </select>
+
+            <label for="particleSpeed">Max Speed: <span id="speedValue" class="value-display">3.0</span></label>
+            <input type="range" id="particleSpeed" min="0.5" max="10" step="0.1" value="3">
+
+            <label for="particleLifespan">Lifespan (frames): <span id="lifespanValue" class="value-display">300</span></label>
+            <input type="range" id="particleLifespan" min="50" max="1000" step="10" value="300">
+        </div>
+
+        <div class="control-group">
+             <h3>Flow Field</h3>
+             <label for="fieldType">Field Type:</label>
+             <select id="fieldType">
+                 <option value="perlin" selected>Perlin Noise</option>
+                 <option value="sine">Sine Wave</option>
+             </select>
+
+            <label for="noiseScale">Noise Scale (Pattern): <span id="noiseScaleValue" class="value-display">0.10</span></label>
+            <input type="range" id="noiseScale" min="0.01" max="0.5" step="0.01" value="0.1">
+
+            <label for="noiseEvolution">Evolution Speed: <span id="noiseEvolutionValue" class="value-display">0.005</span></label>
+            <input type="range" id="noiseEvolution" min="0" max="0.02" step="0.001" value="0.005">
+
+             <label for="flowStrength">Strength: <span id="flowStrengthValue" class="value-display">0.5</span></label>
+            <input type="range" id="flowStrength" min="0" max="2" step="0.1" value="0.5">
+
+             <label for="noiseLod">Noise Detail LoD (Level of Detail): <span id="noiseLodValue" class="value-display">4</span></label>
+            <input type="range" id="noiseLod" min="1" max="10" step="1" value="4">
+
+            <label for="noiseFalloff">Noise Detail Falloff: <span id="noiseFalloffValue" class="value-display">0.5</span></label>
+            <input type="range" id="noiseFalloff" min="0.1" max="1.0" step="0.05" value="0.5">
+
+             <button id="toggleFlowField">Show Flow Field</button>
+        </div>
+
+         <div class="control-group">
+             <h3>Appearance & Trails</h3>
+             <label for="backgroundColor">Background Color:</label>
+             <input type="color" id="backgroundColor" value="#121212">
+
+             <label for="trailStyle">Trail Style:</label>
+             <select id="trailStyle">
+                 <option value="fade" selected>Fading Background</option>
+                 <option value="persist">Persistent Trails</option>
+                 <option value="none">No Trails (Solid BG)</option>
+                 <option value="particleFade">Particle Fade Only</option>
+             </select>
+
+             <label for="trailThicknessMode">Trail Thickness:</label>
+             <select id="trailThicknessMode">
+                 <option value="static" selected>Static</option>
+                 <option value="speed">Speed-Based</option>
+             </select>
+
+             <div class="checkbox-group" id="fadingToggleContainer" style="display: none;">
+                 <label>
+                     <input type="checkbox" id="fadingEnabled" checked> Enable Particle Fading
+                 </label>
+             </div>
+         </div>
+
+        <div class="control-group">
+             <h3>Interaction</h3>
+             <label for="repelRadius">Right-Click Repel Radius: <span id="repelRadiusValue" class="value-display">100</span></label>
+            <input type="range" id="repelRadius" min="20" max="400" step="10" value="100">
+        </div>
+
+        <div class="control-group">
+             <h3>Actions</h3>
+            <button id="resetParticles">Reset Particles</button>
+            <button id="toggleFullscreen">Toggle Fullscreen</button>
+        </div>
+    </div>
+
+    <!-- Exit Fullscreen Button (Initially Hidden) -->
+    <button id="exit-fullscreen-btn">X</button>
+
+    <script>
+        // --- Global Variables ---
+        let particles = [];
+        let flowfield;
+        let scl = 10; // Scale of the grid cells
+        let cols, rows; // Grid dimensions
+        let zoff = 0; // Time dimension for noise
+
+        // --- Variables Controlled by UI ---
+        let numParticlesControl = 1500;
+        let particleBaseColor; // p5.Color object
+        let particleColorMode = 'static';
+        let maxSpeed = 3;
+        let particleLifespanControl = 300; // Added lifespan variable
+        let fadingEnabled = true; // For 'particleFade' mode
+
+        // Flow Field Variables
+        let fieldTypeControl = 'perlin'; // Added field type variable
+        let noiseIncrement = 0.1; // Perlin noise scale
+        let noiseEvolutionSpeed = 0.005; // Speed of noise change
+        let flowMagnitude = 0.5; // Strength of flow vectors
+        let noiseLoD = 4; // Noise detail level
+        let noiseFalloff = 0.5; // Noise detail falloff
+        let showFlowField = false; // Toggle for visualizing the field
+
+        // Appearance & Trails Variables
+        let backgroundColor; // p5.Color object
+        let trailStyleControl = 'fade';
+        let trailThicknessModeControl = 'static'; // Added trail thickness variable
+        const defaultStrokeWeight = 1.5; // Fixed stroke weight for lines
+
+        // Right-Click Repel Variables
+        let isRightClickHeld = false;
+        let repelRadiusControl = 100;
+
+        // Left-Click Gather/Burst Variables (Re-added)
+        let isLeftClickHeld = false; // Changed from isMouseClickHeld
+        let mousePressedTimestamp = 0;
+        const HOLD_DURATION_FOR_BURST = 5000; // 5 seconds in milliseconds
+
+        // --- p5.js Setup Function ---
+        function setup() {
+            let canvasContainer = select('#canvas-container');
+            let canvasWidth = canvasContainer.width || windowWidth - 280;
+            let canvasHeight = windowHeight;
+            let canvas = createCanvas(canvasWidth, canvasHeight);
+            canvas.parent('canvas-container');
+
+            cols = floor(width / scl);
+            rows = floor(height / scl);
+            if (cols > 0 && rows > 0) {
+                flowfield = new Array(cols * rows);
+            } else {
+                flowfield = [];
+                 console.warn("Initial grid dimensions invalid.");
+            }
+
+            particleBaseColor = color(select('#particleColor').value());
+            backgroundColor = color(select('#backgroundColor').value());
+            noiseDetail(noiseLoD, noiseFalloff);
+            resetParticles();
+            setupEventListeners();
+            updateAllValueDisplays();
+            loop();
+        }
+
+        function setupEventListeners() {
+            // Dynamic Particle Count
+            select('#particleCount').input(() => {
+                let newCount = parseInt(select('#particleCount').value());
+                let currentCount = particles.length;
+                select('#particleCountValue').html(newCount);
+                if (newCount > currentCount) {
+                    for (let i = 0; i < newCount - currentCount; i++) particles.push(new Particle());
+                } else if (newCount < currentCount) {
+                    particles.splice(newCount, currentCount - newCount);
+                }
+                 numParticlesControl = newCount;
+            });
+
+            // Particle Controls
+            select('#particleColor').input(() => particleBaseColor = color(select('#particleColor').value()));
+            select('#particleColorMode').changed(() => particleColorMode = select('#particleColorMode').value());
+            select('#particleSpeed').input(() => {
+                maxSpeed = parseFloat(select('#particleSpeed').value());
+                select('#speedValue').html(maxSpeed.toFixed(1));
+            });
+            select('#particleLifespan').input(() => {
+                particleLifespanControl = parseInt(select('#particleLifespan').value());
+                select('#lifespanValue').html(particleLifespanControl);
+            });
+
+            // Flow Field Controls
+            select('#fieldType').changed(() => {
+                fieldTypeControl = select('#fieldType').value();
+                // Select all control elements related to Perlin noise
+                let perlinLabels = selectAll('label[for^="noise"], label[for^="flowStrength"]');
+                let perlinInputs = selectAll('#noiseScale, #noiseEvolution, #flowStrength, #noiseLod, #noiseFalloff');
+                let showPerlin = fieldTypeControl === 'perlin';
+
+                // Toggle visibility based on selection
+                perlinLabels.forEach(label => label.style('display', showPerlin ? 'block' : 'none'));
+                perlinInputs.forEach(input => input.style('display', showPerlin ? 'block' : 'none'));
+
+                // Ensure the Show Flow Field button remains visible
+                select('#toggleFlowField').style('display', 'block');
+
+                if (backgroundColor) background(red(backgroundColor), green(backgroundColor), blue(backgroundColor));
+            });
+            select('#noiseScale').input(() => {
+                noiseIncrement = parseFloat(select('#noiseScale').value());
+                select('#noiseScaleValue').html(noiseIncrement.toFixed(2));
+            });
+            select('#noiseEvolution').input(() => {
+                noiseEvolutionSpeed = parseFloat(select('#noiseEvolution').value());
+                select('#noiseEvolutionValue').html(noiseEvolutionSpeed.toFixed(3));
+            });
+             select('#flowStrength').input(() => {
+                flowMagnitude = parseFloat(select('#flowStrength').value());
+                select('#flowStrengthValue').html(flowMagnitude.toFixed(1));
+            });
+             select('#noiseLod').input(() => {
+                noiseLoD = parseInt(select('#noiseLod').value());
+                noiseDetail(noiseLoD, noiseFalloff);
+                select('#noiseLodValue').html(noiseLoD);
+            });
+             select('#noiseFalloff').input(() => {
+                noiseFalloff = parseFloat(select('#noiseFalloff').value());
+                noiseDetail(noiseLoD, noiseFalloff);
+                select('#noiseFalloffValue').html(noiseFalloff.toFixed(2));
+            });
+            select('#toggleFlowField').mousePressed(() => {
+                showFlowField = !showFlowField;
+                select('#toggleFlowField').html(showFlowField ? 'Hide Flow Field' : 'Show Flow Field');
+                if (backgroundColor) background(red(backgroundColor), green(backgroundColor), blue(backgroundColor));
+            });
+
+             // Appearance & Trails Controls
+             select('#backgroundColor').input(() => {
+                 backgroundColor = color(select('#backgroundColor').value());
+                 if (backgroundColor) background(red(backgroundColor), green(backgroundColor), blue(backgroundColor));
+             });
+             select('#trailStyle').changed(() => {
+                 trailStyleControl = select('#trailStyle').value();
+                 select('#fadingToggleContainer').style('display', trailStyleControl === 'particleFade' ? 'block' : 'none');
+                 if (backgroundColor) background(red(backgroundColor), green(backgroundColor), blue(backgroundColor));
+             });
+             select('#fadingEnabled').changed(() => fadingEnabled = select('#fadingEnabled').checked());
+            select('#trailThicknessMode').changed(() => trailThicknessModeControl = select('#trailThicknessMode').value());
+
+            // Right-Click Repel Listener
+            select('#repelRadius').input(() => {
+                repelRadiusControl = parseFloat(select('#repelRadius').value());
+                select('#repelRadiusValue').html(repelRadiusControl.toFixed(0));
+            });
+
+            // Actions
+            select('#resetParticles').mousePressed(resetParticles);
+            select('#toggleFullscreen').mousePressed(() => {
+                 let fs = fullscreen();
+                 fullscreen(!fs);
+                 // Toggle controls panel visibility and exit button
+                 select('#controls').toggleClass('controls-hidden');
+                 select('#exit-fullscreen-btn').style('display', !fs ? 'flex' : 'none');
+             });
+
+             // Listener for the new exit fullscreen button
+             select('#exit-fullscreen-btn').mousePressed(() => {
+                 if (fullscreen()) {
+                     fullscreen(false); // Exit fullscreen
+                     select('#controls').removeClass('controls-hidden'); // Show controls
+                     select('#exit-fullscreen-btn').style('display', 'none'); // Hide exit button
+                 }
+             });
+        }
+
+        function updateAllValueDisplays() {
+            select('#particleCountValue').html(numParticlesControl);
+            select('#speedValue').html(maxSpeed.toFixed(1));
+            select('#lifespanValue').html(particleLifespanControl);
+            select('#noiseScaleValue').html(noiseIncrement.toFixed(2));
+            select('#noiseEvolutionValue').html(noiseEvolutionSpeed.toFixed(3));
+            select('#flowStrengthValue').html(flowMagnitude.toFixed(1));
+            select('#noiseLodValue').html(noiseLoD);
+            select('#noiseFalloffValue').html(noiseFalloff.toFixed(2));
+            select('#repelRadiusValue').html(repelRadiusControl.toFixed(0));
+        }
+
+        function resetParticles() {
+            particles = [];
+            for (let i = 0; i < numParticlesControl; i++) particles[i] = new Particle();
+            if (backgroundColor) background(red(backgroundColor), green(backgroundColor), blue(backgroundColor));
+            else background(18);
+        }
+
+        function draw() {
+            // --- Handle Background ---
+            noStroke();
+            let bgR = backgroundColor ? red(backgroundColor) : 18;
+            let bgG = backgroundColor ? green(backgroundColor) : 18;
+            let bgB = backgroundColor ? blue(backgroundColor) : 18;
+            switch (trailStyleControl) {
+                case 'fade': fill(bgR, bgG, bgB, 25); rect(0, 0, width, height); break;
+                case 'persist': break;
+                case 'none': fill(bgR, bgG, bgB); rect(0, 0, width, height); break;
+                case 'particleFade': fill(bgR, bgG, bgB); rect(0, 0, width, height); break;
+                default: fill(bgR, bgG, bgB); rect(0, 0, width, height);
+            }
+
+            // --- Update Flow Field based on selected type ---
+            if (fieldTypeControl === 'perlin') {
+                if (cols <= 0 || rows <= 0 || !flowfield || flowfield.length !== cols * rows) {
+                    cols = floor(width / scl); rows = floor(height / scl);
+                    if (cols > 0 && rows > 0) flowfield = new Array(cols * rows);
+                    else return; // Exit draw if grid is invalid
+                }
+                let yoff = 0;
+                for (let y = 0; y < rows; y++) {
+                    let xoff = 0;
+                    for (let x = 0; x < cols; x++) {
+                        let index = x + y * cols;
+                        let angle = noise(xoff, yoff, zoff) * TWO_PI * 4;
+                        let v = p5.Vector.fromAngle(angle);
+                        v.setMag(flowMagnitude);
+                        flowfield[index] = v;
+                        xoff += noiseIncrement;
+                        if (showFlowField) {
+                            push();
+                            translate(x * scl + scl * 0.5, y * scl + scl * 0.5);
+                            rotate(v.heading());
+                            stroke(150, 100); strokeWeight(1);
+                            line(-scl * 0.4, 0, scl * 0.4, 0);
+                            pop();
+                        }
+                    }
+                    yoff += noiseIncrement;
+                }
+                zoff += noiseEvolutionSpeed;
+            } else if (fieldTypeControl === 'sine') {
+                 if (cols <= 0 || rows <= 0 || !flowfield || flowfield.length !== cols * rows) {
+                    cols = floor(width / scl); rows = floor(height / scl);
+                    if (cols > 0 && rows > 0) flowfield = new Array(cols * rows);
+                    else return;
+                 }
+                 for (let y = 0; y < rows; y++) {
+                     for (let x = 0; x < cols; x++) {
+                         let index = x + y * cols;
+                         // Simple sine wave pattern - angle based on x position, oscillates with time (zoff)
+                         let angle = sin(x * 0.1 + zoff) * PI;
+                         let v = p5.Vector.fromAngle(angle);
+                         v.setMag(flowMagnitude * 2); // Make sine wave field a bit stronger
+                         flowfield[index] = v;
+                         if (showFlowField) {
+                             push();
+                             translate(x * scl + scl * 0.5, y * scl + scl * 0.5);
+                             rotate(v.heading());
+                             stroke(150, 100); strokeWeight(1);
+                             line(-scl * 0.4, 0, scl * 0.4, 0);
+                             pop();
+                         }
+                     }
+                 }
+                 zoff += noiseEvolutionSpeed * 0.5; // Slower evolution for sine wave
+            }
+            // --- Update and Draw Particles ---
+            let mouseVec = createVector(mouseX, mouseY); // Need mouse vector for interactions
+            for (let i = 0; i < particles.length; i++) {
+                if (particles[i].isDead()) {
+                    particles[i].reset();
+                }
+
+                // --- Apply Interactions based on Mouse State ---
+                if (isLeftClickHeld) {
+                    // Gather towards mouse, ignore repel and flow field
+                    particles[i].gatherTowards(mouseVec);
+                } else if (isRightClickHeld) {
+                    // Repel from mouse, ignore flow field (allow bursting slowdown)
+                    particles[i].repelFrom(mouseVec);
+                    if (!particles[i].isBursting) { // Don't interfere with burst
+                        particles[i].follow(flowfield); // Apply flow field weakly maybe?
+                    }
+                } else if (!particles[i].isBursting) {
+                     // Apply flow field only if not bursting and no clicks held
+                     particles[i].follow(flowfield);
+                }
+
+                particles[i].update(); // Update handles velocity limit and burst slowdown
+                particles[i].edges();
+                particles[i].show();
+            }
+
+            // Draw Repel Radius Circle
+            if (isRightClickHeld && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                 noFill();
+                 stroke(255, 100, 100, 80); // Faint red circle for repel
+                 strokeWeight(1.5);
+                 ellipse(mouseX, mouseY, repelRadiusControl * 2, repelRadiusControl * 2);
+            }
+        }
+
+        function windowResized() {
+            let canvasContainer = select('#canvas-container');
+            // Controls width no longer affects canvas width due to fixed positioning
+            // let controlsWidth = fullscreen() ? 0 : select('#controls').width;
+            let canvasWidth = windowWidth;
+            let canvasHeight = windowHeight;
+            if (canvasWidth <= 0 || canvasHeight <= 0) return;
+            resizeCanvas(canvasWidth, canvasHeight);
+            cols = floor(width / scl); rows = floor(height / scl);
+            if (cols > 0 && rows > 0) flowfield = new Array(cols * rows);
+            else flowfield = [];
+            if (backgroundColor) background(red(backgroundColor), green(backgroundColor), blue(backgroundColor));
+            else background(18);
+
+             // Adjust controls visibility on resize if exiting fullscreen implicitly
+             if (!fullscreen() && select('#controls').hasClass('controls-hidden')) {
+                 select('#controls').removeClass('controls-hidden');
+                 select('#exit-fullscreen-btn').style('display', 'none');
+             }
+        }
+
+        // Capture Right-Click State
+        function mousePressed() {
+            if (mouseButton === RIGHT) {
+                document.oncontextmenu = () => false;
+                if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                     isRightClickHeld = true;
+                 }
+            } else if (mouseButton === LEFT) {
+                 if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                     isLeftClickHeld = true;
+                     mousePressedTimestamp = millis();
+                 }
+            }
+        }
+
+        function mouseReleased() {
+             if (mouseButton === RIGHT) {
+                 isRightClickHeld = false;
+                 document.oncontextmenu = null;
+             } else if (mouseButton === LEFT) {
+                 if (isLeftClickHeld) { // Only burst if left click was held
+                     let holdDuration = millis() - mousePressedTimestamp;
+                     if (holdDuration >= HOLD_DURATION_FOR_BURST) {
+                         particles.forEach(p => p.burstAway());
+                     }
+                 }
+                 isLeftClickHeld = false;
+                 mousePressedTimestamp = 0; // Reset timestamp regardless
+             }
+        }
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.pos = createVector(random(width), random(height));
+                this.vel = p5.Vector.random2D().mult(random(0.5, maxSpeed));
+                this.acc = createVector(0, 0);
+                this.prevPos = this.pos.copy();
+                this.lifespan = particleLifespanControl;
+                this.age = 0;
+                this.alpha = 255;
+                this.fadeAmount = random(1, 4);
+                this.baseHue = random(360);
+                this.isBursting = false; // Re-add burst flag
+            }
+            update() {
+                this.age++;
+                this.vel.add(this.acc);
+
+                // Limit velocity UNLESS bursting (Re-add bursting logic)
+                if (!this.isBursting) {
+                    this.vel.limit(maxSpeed);
+                } else {
+                    // Gradually slow down after bursting
+                    this.vel.mult(0.95); // Drag effect
+                    if (this.vel.magSq() < 0.1) { // Stop bursting if slow enough
+                        this.isBursting = false;
+                    }
+                }
+
+                if (isNaN(this.vel.x) || isNaN(this.vel.y)) this.vel = createVector(0, 0);
+                this.pos.add(this.vel);
+                this.acc.mult(0);
+                if (trailStyleControl === 'particleFade' && fadingEnabled) this.alpha -= this.fadeAmount;
+                else this.alpha = 255;
+            }
+            applyForce(force) {
+                if (force instanceof p5.Vector && !isNaN(force.x) && !isNaN(force.y)) this.acc.add(force);
+            }
+
+            // Right-Click Repel Method
+            repelFrom(targetVector) {
+                let dir = p5.Vector.sub(this.pos, targetVector); // Vector from target to particle (points away)
+                let d = dir.mag();
+
+                if (d > 0 && d < repelRadiusControl) {
+                    // Stronger force when closer (inverse relationship)
+                    let forceMag = map(d, 0, repelRadiusControl, maxSpeed * 5, 0); // Strong repel force
+                    dir.setMag(forceMag);
+                    this.applyForce(dir); // Apply as acceleration
+                }
+            }
+
+            // Left-Click GATHER Method
+            gatherTowards(targetVector) {
+                let dirToTarget = p5.Vector.sub(targetVector, this.pos);
+                let gatherSpeed = maxSpeed * 1.5;
+                dirToTarget.setMag(gatherSpeed);
+                let steer = p5.Vector.sub(dirToTarget, this.vel);
+                steer.limit(maxSpeed * 0.8);
+                this.applyForce(steer);
+                this.isBursting = false; // Ensure not bursting while gathering
+            }
+
+            // Left-Click Release BURST Method
+            burstAway() {
+                let burstSpeed = maxSpeed * random(6, 10);
+                this.vel = p5.Vector.random2D().mult(burstSpeed);
+                this.acc.mult(0);
+                this.isBursting = true;
+            }
+
+            follow(vectors) {
+                 if (isNaN(this.pos.x) || isNaN(this.pos.y)) { this.reset(); return; }
+                let x = floor(this.pos.x / scl); let y = floor(this.pos.y / scl);
+                x = constrain(x, 0, cols - 1); y = constrain(y, 0, rows - 1);
+                let index = x + y * cols;
+                 if (index >= 0 && index < vectors.length) {
+                    let force = vectors[index];
+                    if (force) this.applyForce(force);
+                 }
+            }
+
+            show() {
+                if (!particleBaseColor) particleBaseColor = color(255);
+                let currentAlpha = max(0, this.alpha);
+                let finalColor;
+
+                // --- Determine Color Based on Mode ---
+                if (particleColorMode === 'static') {
+                    finalColor = color(red(particleBaseColor), green(particleBaseColor), blue(particleBaseColor), currentAlpha);
+                } else if (particleColorMode === 'speed') {
+                    let speedRatio = constrain(this.vel.mag() / maxSpeed, 0, 1);
+                    if (isNaN(speedRatio)) speedRatio = 0;
+                    let hue = map(speedRatio, 0, 1, 240, 0);
+                    colorMode(HSB, 360, 100, 100, 255);
+                    finalColor = color(hue, 80, 90, currentAlpha);
+                    colorMode(RGB);
+                } else if (particleColorMode === 'age') {
+                    let ageRatio = constrain(this.age / this.lifespan, 0, 1);
+                    if (isNaN(ageRatio)) ageRatio = 0;
+                    let hue = map(ageRatio, 0, 1, red(particleBaseColor), red(particleBaseColor) + 120);
+                    let saturation = map(ageRatio, 0, 1, 80, 30);
+                    let brightness = map(ageRatio, 0, 1, 90, 50);
+                    colorMode(HSB, 360, 100, 100, 255);
+                    finalColor = color(hue % 360, saturation, brightness, currentAlpha);
+                    colorMode(RGB);
+                }
+
+                if (!finalColor) finalColor = color(255, currentAlpha);
+
+                // --- Determine Stroke Weight Based on Mode ---
+                let currentStrokeWeight = defaultStrokeWeight;
+                if (trailThicknessModeControl === 'speed') {
+                    let speedRatio = constrain(this.vel.mag() / maxSpeed, 0, 1);
+                    if (isNaN(speedRatio)) speedRatio = 0;
+                    currentStrokeWeight = map(speedRatio, 0, 1, 0.5, defaultStrokeWeight * 2.5);
+                }
+
+                stroke(finalColor);
+                strokeWeight(currentStrokeWeight);
+                line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
+
+                this.updatePrev();
+            }
+
+            updatePrev() {
+                 if (!isNaN(this.pos.x) && !isNaN(this.pos.y)) {
+                    this.prevPos.x = this.pos.x;
+                    this.prevPos.y = this.pos.y;
+                 }
+            }
+            edges() {
+                 if (isNaN(this.pos.x) || isNaN(this.pos.y)) return;
+                let wrapped = false;
+                if (this.pos.x > width) { this.pos.x = 0; wrapped = true; }
+                if (this.pos.x < 0) { this.pos.x = width; wrapped = true; }
+                if (this.pos.y > height) { this.pos.y = 0; wrapped = true; }
+                if (this.pos.y < 0) { this.pos.y = height; wrapped = true; }
+                if (wrapped) {
+                    this.updatePrev();
+                    if (trailStyleControl === 'particleFade' && fadingEnabled) this.alpha = 255;
+                    this.age = 0;
+                }
+            }
+            isDead() { return this.age >= this.lifespan; }
+        }
+    </script>
+</body>
+</html>
