@@ -1,7 +1,11 @@
 # 🌀 The Kaleido-Doodler 3000™ (Model V2 - Clear Edition)  
 *(Warning: May cause temporary fascination and/or disregard for actual work.)*  
 
-[!(https://github.com/Sharvil9/Just-Playin/blob/040b232bee9e9528e59f93ac0c4abd6616d7afab/Kaleidoscope/video1.mp4)]
+
+
+https://github.com/user-attachments/assets/92c61543-8d48-4608-88c0-4c2a3167ce5b
+
+
 
 ---
 
@@ -44,6 +48,13 @@ Welcome, brave artist, to the Kaleido-Doodler 3000™! This isn't your grandma's
 - Use it wisely, or use it often. It works. Always. We made sure this time. Seriously.  
 
 ---
+
+
+
+https://github.com/user-attachments/assets/8c0b310e-cd46-4cfa-9909-6d11b1bbd3ef
+
+
+
 ## 🎮 How To Operate
 
 1. **Wiggle Your Mouse**  
