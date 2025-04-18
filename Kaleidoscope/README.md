@@ -8,7 +8,6 @@ Welcome, brave artist, to the Kaleido-Doodler 3000™! This isn't your grandma's
 
 *"Cutting-edge circa the last stable version we managed to get working reliably."*  
 
-[![Watch the video]](https://github.com/Sharvil9/Just-Playin/blob/181f549f5b9a3d8f04ce27895f83b0b01dd8fc98/Kaleidoscope/video1.mp4)
 ---
 
 ## 🎛️ Features (Or "Things You Can Twiddle")  
@@ -43,8 +42,6 @@ Welcome, brave artist, to the Kaleido-Doodler 3000™! This isn't your grandma's
 - Use it wisely, or use it often. It works. Always. We made sure this time. Seriously.  
 
 ---
-[![Watch the video]](https://github.com/Sharvil9/Just-Playin/blob/181f549f5b9a3d8f04ce27895f83b0b01dd8fc98/Kaleidoscope/video2.mp4)
-
 ## 🎮 How To Operate
 
 1. **Wiggle Your Mouse**  
