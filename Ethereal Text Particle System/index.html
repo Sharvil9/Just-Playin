@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereal Text Particle System with Gemini</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #111111;
+            color: #EAEAEA;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(30, 30, 30, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 10;
+            width: 300px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .control-group { margin-bottom: 16px; }
+        .control-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #EAEAEA; }
+        .control-group input[type="range"] { width: 100%; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+        .control-group input[type="range"]::-webkit-slider-runnable-track { background: #4a4a4a; height: 4px; border-radius: 2px; }
+        .control-group input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; margin-top: -6px; background-color: #EAEAEA; height: 16px; width: 16px; border-radius: 50%; border: 2px solid #111111; }
+        .control-group input[type="range"]::-moz-range-track { background: #4a4a4a; height: 4px; border-radius: 2px; }
+        .control-group input[type="range"]::-moz-range-thumb { background-color: #EAEAEA; height: 16px; width: 16px; border-radius: 50%; border: 2px solid #111111; }
+        
+        #terminal { z-index: 5; width: 60%; max-width: 800px; }
+        #textInput { width: 100%; height: 250px; background-color: #1a1a1a; border: 1px solid #333; color: #EAEAEA; border-radius: 8px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 16px; resize: none; }
+        #textInput:focus { outline: none; border-color: #4a90e2; }
+        
+        .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .gemini-button { padding: 12px; background-color: #2c2c2c; color: #EAEAEA; border: 1px solid #444; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; text-align: center; }
+        .gemini-button:hover { background-color: #3a3a3a; border-color: #666; }
+        .gemini-button:disabled { background-color: #222; color: #555; cursor: not-allowed; }
+        
+        #disintegrateButton { width: 100%; padding: 12px; margin-top: 15px; background-color: #4a90e2; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; grid-column: 1 / -1; }
+        #disintegrateButton:hover { background-color: #357abd; }
+        
+        .hidden { display: none !important; }
+
+        /* Custom Modal for Alerts */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: #2a2a2a; padding: 30px; border-radius: 12px; text-align: center; width: 90%; max-width: 400px; border: 1px solid #444; }
+        .modal-content p { margin-bottom: 20px; font-size: 16px; }
+        .modal-button { padding: 10px 20px; background-color: #4a90e2; color: white; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* Loading Spinner */
+        .loader { width: 20px; height: 20px; border: 3px solid #444; border-bottom-color: #fff; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; margin-left: 8px;}
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="terminal">
+        <textarea id="textInput" placeholder="Paste your text here, or generate some with the ✨ buttons below..."></textarea>
+        <div class="button-grid">
+            <button id="summarizeButton" class="gemini-button">✨ Summarize Text</button>
+            <button id="continueButton" class="gemini-button">✨ Continue Writing</button>
+            <button id="generateButton" class="gemini-button">✨ Generate Random Text</button>
+            <button id="poemButton" class="gemini-button">✨ Create a Poem</button>
+            <button id="disintegrateButton">Disintegrate Text</button>
+        </div>
+        <p class="text-xs text-gray-500 mt-4 text-center">Note:To use ☝️ AI features you would need to add your own Gemini 2.0 Flash API key in the script.</p>
+    </div>
+
+    <canvas id="particleCanvas" class="hidden"></canvas>
+
+    <div class="controls hidden">
+        <h2 class="text-lg font-bold mb-4">Controls</h2>
+        <div class="control-group"><label for="mouseRadius">Interaction Radius</label><input type="range" id="mouseRadius" min="20" max="400" step="10" value="150"></div>
+        <div class="control-group"><label for="returnForce">Return Force (Elasticity)</label><input type="range" id="returnForce" min="0.005" max="0.1" step="0.005" value="0.03"></div>
+        <div class="control-group"><label for="repelStrength">Repel Strength</label><input type="range" id="repelStrength" min="0.5" max="20" step="0.5" value="5"></div>
+    </div>
+
+    <script>
+        const terminalView = document.getElementById('terminal');
+        const textInput = document.getElementById('textInput');
+        const disintegrateButton = document.getElementById('disintegrateButton');
+        const summarizeButton = document.getElementById('summarizeButton');
+        const continueButton = document.getElementById('continueButton');
+        const generateButton = document.getElementById('generateButton');
+        const poemButton = document.getElementById('poemButton');
+        
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        const controlsView = document.querySelector('.controls');
+
+        let config = { particleColor: '#EAEAEA', font: 'Helvetica, Arial, sans-serif', mouseRadius: 150, returnForce: 0.03, mouseRepelStrength: 5 };
+        let particles = [];
+        const mouse = { x: null, y: null };
+
+        const mouseRadiusSlider = document.getElementById('mouseRadius');
+        const returnForceSlider = document.getElementById('returnForce');
+        const repelStrengthSlider = document.getElementById('repelStrength');
+        mouseRadiusSlider.addEventListener('input', (e) => config.mouseRadius = parseInt(e.target.value));
+        returnForceSlider.addEventListener('input', (e) => config.returnForce = parseFloat(e.target.value));
+        repelStrengthSlider.addEventListener('input', (e) => config.mouseRepelStrength = parseFloat(e.target.value));
+
+        class Particle {
+            constructor(char, originX, originY) {
+                this.char = char;
+                this.originX = originX; this.originY = originY;
+                this.x = originX; this.y = originY;
+                this.vx = 0; this.vy = 0;
+                this.color = config.particleColor;
+            }
+            update() {
+                const dxMouse = this.x - mouse.x;
+                const dyMouse = this.y - mouse.y;
+                const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
+                if (distMouse < config.mouseRadius) {
+                    const forceDirectionX = dxMouse / distMouse;
+                    const forceDirectionY = dyMouse / distMouse;
+                    const force = (config.mouseRadius - distMouse) / config.mouseRadius;
+                    const repelForce = force * config.mouseRepelStrength;
+                    this.vx += forceDirectionX * repelForce;
+                    this.vy += forceDirectionY * repelForce;
+                }
+                const dxOrigin = this.originX - this.x;
+                const dyOrigin = this.originY - this.y;
+                this.vx += dxOrigin * config.returnForce;
+                this.vy += dyOrigin * config.returnForce;
+                this.vx *= 0.92; this.vy *= 0.92;
+                this.x += this.vx; this.y += this.vy;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillText(this.char, this.x, this.y);
+            }
+        }
+
+        /**
+         * Generates particles from a text string, with word wrapping to fit the screen.
+         * The entire text block is centered on the canvas.
+         * @param {string} text - The input text.
+         */
+        function generateParticlesFromText(text) {
+            particles = [];
+            const fontSize = 20;
+            const lineHeight = fontSize * 1.2;
+            ctx.font = `${fontSize}px ${config.font}`;
+
+            // Define the maximum width for the text block (e.g., 80% of canvas width)
+            const maxLineWidth = canvas.width * 0.8;
+            const blockStartX = (canvas.width - maxLineWidth) / 2;
+
+            // --- Word Wrapping Logic ---
+            const words = text.split(' ');
+            let currentLine = '';
+            let wrappedLines = [];
+
+            words.forEach(word => {
+                // Handle existing newlines in the text
+                const newlines = word.split('\n');
+                if (newlines.length > 1) {
+                    newlines.forEach((subWord, index) => {
+                        const testLine = currentLine + subWord + ' ';
+                        if (ctx.measureText(testLine).width > maxLineWidth && currentLine.length > 0) {
+                            wrappedLines.push(currentLine);
+                            currentLine = subWord + ' ';
+                        } else {
+                            currentLine = testLine;
+                        }
+                        if (index < newlines.length - 1) {
+                            wrappedLines.push(currentLine.trim());
+                            currentLine = '';
+                        }
+                    });
+                } else {
+                    const testLine = currentLine + word + ' ';
+                    if (ctx.measureText(testLine).width > maxLineWidth && currentLine.length > 0) {
+                        wrappedLines.push(currentLine);
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+            });
+            wrappedLines.push(currentLine); // Add the last line
+
+            // --- Particle Creation from Wrapped Lines ---
+            const totalHeight = wrappedLines.length * lineHeight;
+            const startY = (canvas.height - totalHeight) / 2;
+
+            wrappedLines.forEach((line, lineIndex) => {
+                let currentX = blockStartX;
+                const originY = startY + lineIndex * lineHeight;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char.trim() !== '') {
+                        particles.push(new Particle(char, currentX, originY));
+                    }
+                    currentX += ctx.measureText(char).width;
+                }
+            });
+        }
+
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            mouse.x = canvas.width / 2;
+            mouse.y = canvas.height / 2;
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+
+        // --- Gemini API Integration ---
+        async function callGemini(prompt, button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = 'Thinking... <span class="loader"></span>';
+            button.disabled = true;
+            
+            const apiKey = ""; // API key is handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error("Invalid response from API.");
+                }
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                showModal(`Error: Could not get a response from the AI. ${error.message}`);
+                return null;
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        summarizeButton.addEventListener('click', async () => {
+            const text = textInput.value;
+            if (text.trim() === '') {
+                showModal('Please enter some text to summarize.');
+                return;
+            }
+            const prompt = `Please provide a concise summary of the following text:\n\n${text}`;
+            const summary = await callGemini(prompt, summarizeButton);
+            if (summary) textInput.value = summary;
+        });
+
+        continueButton.addEventListener('click', async () => {
+            const text = textInput.value;
+            if (text.trim() === '') {
+                showModal('Please enter some text to continue.');
+                return;
+            }
+            const prompt = `Continue writing the following text, adding one or two more paragraphs:\n\n${text}`;
+            const continuation = await callGemini(prompt, continueButton);
+            if (continuation) textInput.value = text + '\n\n' + continuation;
+        });
+
+        generateButton.addEventListener('click', async () => {
+            const prompt = "Write a short, interesting paragraph about a random, thought-provoking topic.";
+            const generatedText = await callGemini(prompt, generateButton);
+            if (generatedText) textInput.value = generatedText;
+        });
+
+        poemButton.addEventListener('click', async () => {
+            const text = textInput.value;
+            if (text.trim() === '') {
+                showModal('Please enter some text to turn into a poem.');
+                return;
+            }
+            const prompt = `Turn the following text into a short, elegant poem:\n\n${text}`;
+            const poem = await callGemini(prompt, poemButton);
+            if (poem) textInput.value = poem;
+        });
+        
+        // --- Core App Logic & Event Listeners ---
+        disintegrateButton.addEventListener('click', () => {
+            const text = textInput.value;
+            if (text.trim() === '') {
+                showModal('Please enter some text or generate it first.');
+                return;
+            }
+            terminalView.classList.add('hidden');
+            canvas.classList.remove('hidden');
+            controlsView.classList.remove('hidden');
+            initCanvas();
+            generateParticlesFromText(text);
+            animate();
+        });
+
+        window.addEventListener('resize', () => {
+            if (!canvas.classList.contains('hidden')) {
+                initCanvas();
+                generateParticlesFromText(textInput.value);
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        canvas.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+
+        // --- Custom Modal Function ---
+        function showModal(message) {
+            // Remove existing modal first
+            const existingModal = document.querySelector('.modal-overlay');
+            if (existingModal) existingModal.remove();
+            
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+            
+            const modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            
+            const modalText = document.createElement('p');
+            modalText.textContent = message;
+            
+            const closeButton = document.createElement('button');
+            closeButton.className = 'modal-button';
+            closeButton.textContent = 'OK';
+            closeButton.onclick = () => modalOverlay.remove();
+            
+            modalContent.appendChild(modalText);
+            modalContent.appendChild(closeButton);
+            modalOverlay.appendChild(modalContent);
+            document.body.appendChild(modalOverlay);
+            closeButton.focus();
+        }
+
+    </script>
+</body>
+</html>
