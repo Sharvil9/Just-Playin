@@ -3,7 +3,7 @@
 Welcome to the **Ethereal Text Particle System**!  
 Here, plain old text gets a supernatural makeover and floats, dances and explodes into particles—just like your hopes and dreams after reading "AI generated code" in the repo description.
 
-![Particles in action]([https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif](https://github.com/Sharvil9/Just-Playin/blob/main/Ethereal%20Text%20Particle%20System/Ethereal%20Particalization.gif))
+![Particles in action]([Ethereal Text Particle System/Ethereal Particalization.gif))
 
 
 ## 🚀 What is this?
