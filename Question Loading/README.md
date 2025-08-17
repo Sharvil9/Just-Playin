@@ -5,6 +5,12 @@ Here, questions aren't just loaded—they're *preheated*, *pan-fried*, and somet
 
 ---
 
+![Looping Video 
+
+https://github.com/user-attachments/assets/6eed6713-b0e9-46fe-8659-688ba896b4ff
+
+
+
 ## 📦 What Is This?
 
 - **Question Loading** is a mysterious HTML artifact lurking in the depths of this repo.
@@ -16,7 +22,7 @@ Here, questions aren't just loaded—they're *preheated*, *pan-fried*, and somet
 ## ⚡ Features
 
 - **Loads Questions** – Sometimes quickly, sometimes like your Wi-Fi in a basement.
-- **Unpredictability** – Expect the unexpected. Or don't. We're not your boss.
+- **Unpredictability** – Expect the unexpected. Or don't. We're not your boss. Act at your own risk.
 - **Single File Simplicity** – Just one `index.html` to rule them all.
 - **Infinite Loop Potential** – Ever loaded a question that never stops loading? You're about to.
 
@@ -36,11 +42,11 @@ Here, questions aren't just loaded—they're *preheated*, *pan-fried*, and somet
 **Q: Will this answer my questions?**  
 **A:** Only if your question is “Will this load something?”
 
-**Q: Why isn’t there a progress bar?**  
+**Q: Why is there a progress bar?**  
 **A:** Because progress is a state of mind.
 
 **Q: Can I customize the questions?**  
-**A:** Sure! Open the HTML, edit away, and become the quizmaster you always dreamed of.
+**A:** Sure! Open the HTML, edit away, and become the quizmaster you always dreamed of. Goto line 164 😉.
 
 ---
 
