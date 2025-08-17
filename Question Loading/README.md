@@ -5,7 +5,7 @@ Here, questions aren't just loaded—they're *preheated*, *pan-fried*, and somet
 
 ---
 
-<video src="https://github.com/user-attachments/assets/6eed6713-b0e9-46fe-8659-688ba896b4ff" autoplay loop muted></video>
+<video src="https://github.com/user-attachments/assets/6eed6713-b0e9-46fe-8659-688ba896b4ff" autoplay loop ></video>
 
 ## 📦 What Is This?
 
